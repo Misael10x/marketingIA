@@ -5,35 +5,9 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 import plotly.express as px
 import plotly
-import tensorflow as tf
 import os
 
 app = Flask(__name__)
-
-# -----------------------------
-# cargar modelo tflite
-# -----------------------------
-
-model_path = "autoencoder.tflite"
-
-interpreter = None
-input_details = None
-output_details = None
-
-if os.path.exists(model_path):
-
-    interpreter = tf.lite.Interpreter(model_path=model_path)
-    interpreter.allocate_tensors()
-
-    input_details = interpreter.get_input_details()
-    output_details = interpreter.get_output_details()
-
-    print("Modelo TFLite cargado")
-
-else:
-
-    print("Modelo no encontrado")
-
 
 # -----------------------------
 # HOME
@@ -72,42 +46,54 @@ def upload_csv():
         if df.shape[1] == 0:
             return "El CSV no tiene columnas numéricas"
 
-        # limpiar NaN
+        # limpiar datos
         df = df.fillna(0)
 
-        data = df.values.astype("float32")
+        # -----------------------------
+        # LIMITES PARA EVITAR 502
+        # -----------------------------
 
-        # -------------------------
+        if df.shape[1] > 10:
+            df = df.iloc[:, :10]
+
+        if df.shape[0] > 1000:
+            df = df.sample(1000)
+
+        # -----------------------------
         # HEATMAP
-        # -------------------------
+        # -----------------------------
 
         heatmap = px.imshow(df.corr(), title="Correlation Heatmap")
+
         heatmap_html = plotly.io.to_html(heatmap, full_html=False)
 
-        # -------------------------
+        # -----------------------------
         # HISTOGRAMA
-        # -------------------------
+        # -----------------------------
 
         hist = px.histogram(df, x=df.columns[0])
+
         hist_html = plotly.io.to_html(hist, full_html=False)
 
-        # -------------------------
+        # -----------------------------
         # BOXPLOT
-        # -------------------------
+        # -----------------------------
 
         box = px.box(df)
+
         box_html = plotly.io.to_html(box, full_html=False)
 
-        # -------------------------
+        # -----------------------------
         # SCATTER MATRIX
-        # -------------------------
+        # -----------------------------
 
         scatter = px.scatter_matrix(df)
+
         scatter_html = plotly.io.to_html(scatter, full_html=False)
 
-        # -------------------------
+        # -----------------------------
         # CLUSTER
-        # -------------------------
+        # -----------------------------
 
         kmeans = KMeans(n_clusters=3, n_init=10)
 
@@ -133,9 +119,9 @@ def upload_csv():
 
         cluster_html = plotly.io.to_html(cluster_plot, full_html=False)
 
-        # -------------------------
+        # -----------------------------
         # PCA 3D
-        # -------------------------
+        # -----------------------------
 
         components = min(3, df.shape[1])
 
@@ -159,49 +145,6 @@ def upload_csv():
 
         pca3_html = plotly.io.to_html(pca3_plot, full_html=False)
 
-        # -------------------------
-        # AUTOENCODER
-        # -------------------------
-
-        error_html = None
-
-        if interpreter is not None:
-
-            errors = []
-
-            for row in data:
-
-                row = list(row)
-
-                if len(row) < 37:
-                    row = row + [0]*(37-len(row))
-
-                values = np.array(row, dtype=np.float32).reshape(1,37)
-
-                interpreter.set_tensor(input_details[0]['index'], values)
-
-                interpreter.invoke()
-
-                prediction = interpreter.get_tensor(output_details[0]['index'])
-
-                error = np.mean(np.square(values - prediction))
-
-                errors.append(error)
-
-            error_df = pd.DataFrame({
-                "index": range(len(errors)),
-                "error": errors
-            })
-
-            error_plot = px.line(
-                error_df,
-                x="index",
-                y="error",
-                title="Anomaly Detection"
-            )
-
-            error_html = plotly.io.to_html(error_plot, full_html=False)
-
         return render_template(
             "dashboard.html",
             heatmap=heatmap_html,
@@ -210,7 +153,7 @@ def upload_csv():
             scatter=scatter_html,
             cluster=cluster_html,
             pca3=pca3_html,
-            error=error_html
+            error=None
         )
 
     except Exception as e:

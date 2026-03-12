@@ -10,6 +10,10 @@ import os
 
 app = Flask(__name__)
 
+# limitar tamaño de archivos (5MB)
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
+
+
 # -----------------------------
 # cargar modelo tflite
 # -----------------------------
@@ -57,6 +61,10 @@ def upload_csv():
 
     df = pd.read_csv(file, encoding="latin1")
 
+    # limitar dataset para evitar crash en render
+    df = df.head(500)
+
+    # solo columnas numericas
     df = df.select_dtypes(include=[np.number])
 
     if df.shape[1] == 0:
@@ -69,7 +77,6 @@ def upload_csv():
     # -------------------------
 
     heatmap = px.imshow(df.corr(), title="Correlation Heatmap")
-
     heatmap_html = plotly.io.to_html(heatmap, full_html=False)
 
     # -------------------------
@@ -77,7 +84,6 @@ def upload_csv():
     # -------------------------
 
     hist = px.histogram(df, x=df.columns[0])
-
     hist_html = plotly.io.to_html(hist, full_html=False)
 
     # -------------------------
@@ -85,19 +91,21 @@ def upload_csv():
     # -------------------------
 
     box = px.box(df)
-
     box_html = plotly.io.to_html(box, full_html=False)
 
     # -------------------------
     # SCATTER MATRIX
     # -------------------------
 
-    scatter = px.scatter_matrix(df)
+    if len(df.columns) > 6:
+        scatter = px.scatter_matrix(df[df.columns[:6]])
+    else:
+        scatter = px.scatter_matrix(df)
 
     scatter_html = plotly.io.to_html(scatter, full_html=False)
 
     # -------------------------
-    # CLUSTER KMEANS
+    # CLUSTER
     # -------------------------
 
     kmeans = KMeans(n_clusters=3, n_init=10)
@@ -196,7 +204,7 @@ def upload_csv():
     outlier_html = plotly.io.to_html(outlier_plot, full_html=False)
 
     # -------------------------
-    # TREND ANALYSIS
+    # TREND
     # -------------------------
 
     trend_plot = px.line(
@@ -209,7 +217,7 @@ def upload_csv():
     trend_html = plotly.io.to_html(trend_plot, full_html=False)
 
     # -------------------------
-    # AUTOENCODER (ANOMALY)
+    # AUTOENCODER
     # -------------------------
 
     error_html = None
@@ -266,7 +274,7 @@ def upload_csv():
     """
 
     # -------------------------
-    # RENDER DASHBOARD
+    # DASHBOARD
     # -------------------------
 
     return render_template(
@@ -290,5 +298,7 @@ def upload_csv():
 # -----------------------------
 
 if __name__ == "__main__":
+
     port = int(os.environ.get("PORT", 10000))
+
     app.run(host="0.0.0.0", port=port)

@@ -6,23 +6,47 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 import plotly.express as px
 import plotly
+import os
 
 app = Flask(__name__)
 
-# cargar modelo
-interpreter = tf.lite.Interpreter(model_path="autoencoder.tflite")
-interpreter.allocate_tensors()
+# -------------------------
+# CARGAR MODELO TFLITE
+# -------------------------
 
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
+model_path = "autoencoder.tflite"
 
-print("Modelo TFLite cargado")
+interpreter = None
+input_details = None
+output_details = None
 
+if os.path.exists(model_path):
+
+    interpreter = tf.lite.Interpreter(model_path=model_path)
+    interpreter.allocate_tensors()
+
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+
+    print("Modelo TFLite cargado correctamente")
+
+else:
+
+    print("⚠ No se encontró autoencoder.tflite")
+
+
+# -------------------------
+# HOME
+# -------------------------
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
+
+# -------------------------
+# ANALISIS CSV
+# -------------------------
 
 @app.route("/upload_csv", methods=["POST"])
 def upload_csv():
@@ -31,6 +55,7 @@ def upload_csv():
 
     df = pd.read_csv(file, encoding="latin1")
 
+    # solo columnas numericas
     df = df.select_dtypes(include=[np.number])
 
     data = df.values.astype("float32")
@@ -47,10 +72,11 @@ def upload_csv():
     heatmap_html = plotly.io.to_html(heatmap, full_html=False)
 
     # -----------------------
-    # HISTOGRAMAS
+    # HISTOGRAMA
     # -----------------------
 
     hist = px.histogram(df, x=df.columns[0])
+
     hist_html = plotly.io.to_html(hist, full_html=False)
 
     # -----------------------
@@ -58,6 +84,7 @@ def upload_csv():
     # -----------------------
 
     box = px.box(df)
+
     box_html = plotly.io.to_html(box, full_html=False)
 
     # -----------------------
@@ -65,16 +92,19 @@ def upload_csv():
     # -----------------------
 
     scatter = px.scatter_matrix(df)
+
     scatter_html = plotly.io.to_html(scatter, full_html=False)
 
     # -----------------------
     # CLUSTERING
     # -----------------------
 
-    kmeans = KMeans(n_clusters=3)
+    kmeans = KMeans(n_clusters=3, n_init=10)
+
     clusters = kmeans.fit_predict(df)
 
     pca = PCA(n_components=2)
+
     pca_data = pca.fit_transform(df)
 
     cluster_df = pd.DataFrame({
@@ -118,43 +148,51 @@ def upload_csv():
     pca3_html = plotly.io.to_html(pca3_plot, full_html=False)
 
     # -----------------------
-    # AUTOENCODER
+    # AUTOENCODER (si existe)
     # -----------------------
 
-    errors = []
+    error_html = None
 
-    for row in data:
+    if interpreter is not None:
 
-        row = list(row)
+        errors = []
 
-        if len(row) < 37:
-            row = row + [0]*(37-len(row))
+        for row in data:
 
-        values = np.array(row, dtype=np.float32).reshape(1,37)
+            row = list(row)
 
-        interpreter.set_tensor(input_details[0]['index'], values)
+            if len(row) < 37:
+                row = row + [0]*(37-len(row))
 
-        interpreter.invoke()
+            values = np.array(row, dtype=np.float32).reshape(1,37)
 
-        prediction = interpreter.get_tensor(output_details[0]['index'])
+            interpreter.set_tensor(input_details[0]['index'], values)
 
-        error = np.mean(np.square(values - prediction))
+            interpreter.invoke()
 
-        errors.append(error)
+            prediction = interpreter.get_tensor(output_details[0]['index'])
 
-    error_df = pd.DataFrame({
-        "index": range(len(errors)),
-        "error": errors
-    })
+            error = np.mean(np.square(values - prediction))
 
-    error_plot = px.line(
-        error_df,
-        x="index",
-        y="error",
-        title="Anomaly Detection (Autoencoder)"
-    )
+            errors.append(error)
 
-    error_html = plotly.io.to_html(error_plot, full_html=False)
+        error_df = pd.DataFrame({
+            "index": range(len(errors)),
+            "error": errors
+        })
+
+        error_plot = px.line(
+            error_df,
+            x="index",
+            y="error",
+            title="Anomaly Detection (Autoencoder)"
+        )
+
+        error_html = plotly.io.to_html(error_plot, full_html=False)
+
+    # -----------------------
+    # RENDER DASHBOARD
+    # -----------------------
 
     return render_template(
         "dashboard.html",
@@ -167,6 +205,10 @@ def upload_csv():
         error=error_html
     )
 
+
+# -------------------------
+# START SERVER
+# -------------------------
 
 if __name__ == "__main__":
     app.run()

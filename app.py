@@ -5,10 +5,8 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 import plotly.express as px
 import plotly
+import tensorflow as tf
 import os
-
-# usar TensorFlow Lite runtime
-from tflite_runtime.interpreter import Interpreter
 
 app = Flask(__name__)
 
@@ -24,7 +22,7 @@ output_details = None
 
 if os.path.exists(model_path):
 
-    interpreter = Interpreter(model_path=model_path)
+    interpreter = tf.lite.Interpreter(model_path=model_path)
     interpreter.allocate_tensors()
 
     input_details = interpreter.get_input_details()
@@ -200,5 +198,10 @@ def upload_csv():
     )
 
 
+# -----------------------------
+# RUN SERVER
+# -----------------------------
+
 if __name__ == "__main__":
-    app.run()
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)

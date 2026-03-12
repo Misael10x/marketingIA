@@ -1,18 +1,20 @@
 from flask import Flask, render_template, request
 import pandas as pd
 import numpy as np
-import tensorflow as tf
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 import plotly.express as px
 import plotly
 import os
 
+# usar TensorFlow Lite runtime
+from tflite_runtime.interpreter import Interpreter
+
 app = Flask(__name__)
 
-# -------------------------
-# CARGAR MODELO TFLITE
-# -------------------------
+# -----------------------------
+# cargar modelo tflite
+# -----------------------------
 
 model_path = "autoencoder.tflite"
 
@@ -22,31 +24,31 @@ output_details = None
 
 if os.path.exists(model_path):
 
-    interpreter = tf.lite.Interpreter(model_path=model_path)
+    interpreter = Interpreter(model_path=model_path)
     interpreter.allocate_tensors()
 
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
 
-    print("Modelo TFLite cargado correctamente")
+    print("Modelo TFLite cargado")
 
 else:
 
-    print("⚠ No se encontró autoencoder.tflite")
+    print("Modelo no encontrado")
 
 
-# -------------------------
+# -----------------------------
 # HOME
-# -------------------------
+# -----------------------------
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
 
-# -------------------------
-# ANALISIS CSV
-# -------------------------
+# -----------------------------
+# ANALISIS
+# -----------------------------
 
 @app.route("/upload_csv", methods=["POST"])
 def upload_csv():
@@ -55,49 +57,45 @@ def upload_csv():
 
     df = pd.read_csv(file, encoding="latin1")
 
-    # solo columnas numericas
     df = df.select_dtypes(include=[np.number])
 
     data = df.values.astype("float32")
 
-    # -----------------------
+    # -------------------------
     # HEATMAP
-    # -----------------------
+    # -------------------------
 
-    heatmap = px.imshow(
-        df.corr(),
-        title="Correlation Heatmap"
-    )
+    heatmap = px.imshow(df.corr(), title="Correlation Heatmap")
 
     heatmap_html = plotly.io.to_html(heatmap, full_html=False)
 
-    # -----------------------
+    # -------------------------
     # HISTOGRAMA
-    # -----------------------
+    # -------------------------
 
     hist = px.histogram(df, x=df.columns[0])
 
     hist_html = plotly.io.to_html(hist, full_html=False)
 
-    # -----------------------
+    # -------------------------
     # BOXPLOT
-    # -----------------------
+    # -------------------------
 
     box = px.box(df)
 
     box_html = plotly.io.to_html(box, full_html=False)
 
-    # -----------------------
+    # -------------------------
     # SCATTER MATRIX
-    # -----------------------
+    # -------------------------
 
     scatter = px.scatter_matrix(df)
 
     scatter_html = plotly.io.to_html(scatter, full_html=False)
 
-    # -----------------------
-    # CLUSTERING
-    # -----------------------
+    # -------------------------
+    # CLUSTER
+    # -------------------------
 
     kmeans = KMeans(n_clusters=3, n_init=10)
 
@@ -123,9 +121,9 @@ def upload_csv():
 
     cluster_html = plotly.io.to_html(cluster_plot, full_html=False)
 
-    # -----------------------
+    # -------------------------
     # PCA 3D
-    # -----------------------
+    # -------------------------
 
     pca3 = PCA(n_components=3)
 
@@ -147,9 +145,9 @@ def upload_csv():
 
     pca3_html = plotly.io.to_html(pca3_plot, full_html=False)
 
-    # -----------------------
-    # AUTOENCODER (si existe)
-    # -----------------------
+    # -------------------------
+    # AUTOENCODER
+    # -------------------------
 
     error_html = None
 
@@ -185,14 +183,10 @@ def upload_csv():
             error_df,
             x="index",
             y="error",
-            title="Anomaly Detection (Autoencoder)"
+            title="Anomaly Detection"
         )
 
         error_html = plotly.io.to_html(error_plot, full_html=False)
-
-    # -----------------------
-    # RENDER DASHBOARD
-    # -----------------------
 
     return render_template(
         "dashboard.html",
@@ -205,10 +199,6 @@ def upload_csv():
         error=error_html
     )
 
-
-# -------------------------
-# START SERVER
-# -------------------------
 
 if __name__ == "__main__":
     app.run()

@@ -1,0 +1,58 @@
+body {
+
+background:#090909;
+font-family:Arial;
+color:#00eaff;
+
+}
+
+h1 {
+
+text-align:center;
+color:#00f7ff;
+
+text-shadow:
+
+0 0 5px #00f7ff,
+0 0 20px #00f7ff,
+0 0 40px #00f7ff;
+
+}
+
+.container {
+
+text-align:center;
+margin-top:100px;
+
+}
+
+button {
+
+background:#ffffff;
+border:2px solid #00f7ff;
+
+padding:12px 20px;
+
+color:#00f7ff;
+
+font-size:18px;
+
+box-shadow:
+
+0 0 10px #00f7ff;
+
+cursor:pointer;
+
+}
+
+.grid {
+
+display:grid;
+
+grid-template-columns:1fr 1fr;
+
+gap:40px;
+
+padding:40px;
+
+}

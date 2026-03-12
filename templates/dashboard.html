@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>AI Dashboard</title>
+
+<link rel="stylesheet" href="/static/style.css">
+
+</head>
+
+<body>
+
+<h1>AI Marketing Analysis</h1>
+
+<div class="grid">
+
+<div>{{ heatmap | safe }}</div>
+<div>{{ hist | safe }}</div>
+
+<div>{{ box | safe }}</div>
+
+<div>{{ scatter | safe }}</div>
+
+<div>{{ cluster | safe }}</div>
+
+<div>{{ pca3 | safe }}</div>
+
+<div>{{ error | safe }}</div>
+
+</div>
+
+</body>
+
+</html>

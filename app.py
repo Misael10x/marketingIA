@@ -45,7 +45,7 @@ def home():
 
 
 # -----------------------------
-# ANALISIS
+# ANALISIS CSV
 # -----------------------------
 
 @app.route("/upload_csv", methods=["POST"])
@@ -53,11 +53,17 @@ def upload_csv():
 
     try:
 
+        if "file" not in request.files:
+            return "No se recibió archivo"
+
         file = request.files["file"]
 
         if file.filename == "":
-            return "No se subió ningún archivo"
+            return "Archivo vacío"
 
+        print("Archivo recibido:", file.filename)
+
+        # leer csv
         df = pd.read_csv(file, encoding="latin1")
 
         # solo columnas numericas
@@ -66,7 +72,7 @@ def upload_csv():
         if df.shape[1] == 0:
             return "El CSV no tiene columnas numéricas"
 
-        # limpiar datos
+        # limpiar NaN
         df = df.fillna(0)
 
         data = df.values.astype("float32")

@@ -2,34 +2,98 @@
 <html>
 
 <head>
+    <title>AI Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
 
-<title>AI Dashboard</title>
+    <style>
+        .buttons {
+            text-align: center;
+            margin-bottom: 20px;
+        }
 
-<link rel="stylesheet" href="/static/style.css">
+        .buttons button {
+            margin: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            background: #111;
+            color: #0ff;
+            font-weight: bold;
+        }
+
+        .buttons button:hover {
+            background: #0ff;
+            color: #000;
+        }
+
+        .graph {
+            display: none;
+        }
+
+        .active {
+            display: block;
+        }
+    </style>
 
 </head>
 
 <body>
 
-<h1>AI Marketing Analysis</h1>
+<h1 style="text-align:center;">AI Marketing Analysis</h1>
 
+<!-- BOTONES -->
+<div class="buttons">
+    <button onclick="showGraph('heatmap')">Heatmap</button>
+    <button onclick="showGraph('hist')">Histograma</button>
+    <button onclick="showGraph('box')">Boxplot</button>
+    <button onclick="showGraph('scatter')">Scatter Matrix</button>
+    <button onclick="showGraph('cluster')">Clusters</button>
+    <button onclick="showGraph('pca3')">PCA 3D</button>
+</div>
+
+<!-- GRAFICAS -->
 <div class="grid">
 
-<div>{{ heatmap | safe }}</div>
-<div>{{ hist | safe }}</div>
+    <div id="heatmap" class="graph active">
+        {{ heatmap | safe }}
+    </div>
 
-<div>{{ box | safe }}</div>
+    <div id="hist" class="graph">
+        {{ hist | safe }}
+    </div>
 
-<div>{{ scatter | safe }}</div>
+    <div id="box" class="graph">
+        {{ box | safe }}
+    </div>
 
-<div>{{ cluster | safe }}</div>
+    <div id="scatter" class="graph">
+        {{ scatter | safe }}
+    </div>
 
-<div>{{ pca3 | safe }}</div>
+    <div id="cluster" class="graph">
+        {{ cluster | safe }}
+    </div>
 
-<div>{{ error | safe }}</div>
+    <div id="pca3" class="graph">
+        {{ pca3 | safe }}
+    </div>
 
 </div>
 
-</body>
+<!-- SCRIPT -->
+<script>
+function showGraph(id) {
 
+    const graphs = document.querySelectorAll('.graph');
+
+    graphs.forEach(g => {
+        g.classList.remove('active');
+    });
+
+    document.getElementById(id).classList.add('active');
+}
+</script>
+
+</body>
 </html>
